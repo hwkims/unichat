@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TensorFlow.js Q&A Chatbot</title>
+  <style>
+    body { font-family: sans-serif; }
+    .chat-container { width: 600px; margin: 0 auto; border: 1px solid #ccc; padding: 10px; }
+    .chat-log { height: 300px; overflow-y: scroll; border: 1px solid #eee; padding: 5px; margin-bottom: 10px; }
+    .user-input { width: 100%; padding: 5px; box-sizing: border-box; }
+    .message { margin-bottom: 5px; padding: 3px; }
+    .user { background-color: #e0f7fa; text-align: right; }
+    .bot { background-color: #f0f4c3; text-align: left; }
+    .loading { font-style: italic; color: gray; }
+  </style>
+</head>
+<body>
+
+<div class="chat-container">
+  <div class="chat-log" id="chatLog">
+    <div class="message bot">Loading model... Please wait. <span id="loadingStatus"></span></div>
+  </div>
+  <input type="text" class="user-input" id="userInput" placeholder="Ask a question..." disabled>
+</div>
+
+<!-- TensorFlow.js and Q&A model -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/qna@1.0.0/dist/qna.min.js"></script>
+
+<script>
+  const chatLog = document.getElementById('chatLog');
+  const userInput = document.getElementById('userInput');
+  const loadingStatus = document.getElementById('loadingStatus');
+  let model;
+
+  // Load the Q&A model
+  async function loadModel() {
+    try {
+      model = await qna.load();
+      displayMessage("Model loaded! You can now ask questions.", "bot");
+      userInput.disabled = false; // Enable input after model is loaded
+    } catch (error) {
+      console.error("Error loading model:", error);
+      displayMessage("Failed to load the model. Please check your internet connection and try refreshing the page.", "bot");
+    }
+  }
+
+  loadModel(); // Start loading the model immediately
+
+    userInput.addEventListener('keypress', async (event) => {
+        if (event.key === 'Enter') {
+            const question = userInput.value;
+            displayMessage(question, 'user');
+            userInput.value = '';
+            userInput.disabled = true;  // Disable input during processing
+
+            try {
+                const answers = await model.findAnswers(question, passage);
+                displayBotResponse(answers);
+            } catch (error) {
+                 console.error("Error finding answers:", error);
+                displayMessage("An error occurred while processing your question.", "bot");
+            } finally {
+              userInput.disabled = false; // Re-enable input
+              userInput.focus();         // Put the focus back in the input box.
+            }
+
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+    });
+
+
+  function displayBotResponse(answers) {
+    if (answers.length > 0) {
+      const bestAnswer = answers[0].text; // Get the highest confidence answer
+      displayMessage(bestAnswer, 'bot');
+    } else {
+      displayMessage("I couldn't find an answer to your question.", "bot");
+    }
+  }
+
+  function displayMessage(message, sender) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', sender);
+    messageDiv.textContent = message;
+    chatLog.appendChild(messageDiv);
+  }
+
+  // A sample passage for the model to use.  You'll need to change this.
+    const passage = `
+    The quick brown fox jumps over the lazy dog.  This is a sentence often used to
+    test fonts because it includes all the letters of the English alphabet.
+    The capital of France is Paris.  Paris is known for its art, culture, and
+    landmarks like the Eiffel Tower.  The speed of light in a vacuum is approximately
+    299,792,458 meters per second.
+    `;
+
+</script>
+
+</body>
+</html>
