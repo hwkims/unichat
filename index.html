@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>유니코드 소리 챗봇</title>
+  <style>
+    body { font-family: sans-serif; }
+    .chat-container { width: 500px; margin: 0 auto; border: 1px solid #ccc; padding: 10px; }
+    .chat-log { height: 200px; overflow-y: scroll; border: 1px solid #eee; padding: 5px; margin-bottom: 10px; }
+    .user-input { width: 100%; padding: 5px; box-sizing: border-box; }
+    .message { margin-bottom: 5px; padding: 3px; }
+    .user { background-color: #e0f7fa; text-align: right; }
+    .bot { background-color: #f0f4c3; text-align: left; }
+  </style>
+</head>
+<body>
+
+<div class="chat-container">
+  <div class="chat-log" id="chatLog">
+    <div class="message bot">안녕하세요! 무엇이든 물어보세요. 유니코드와 소리로 답변해 드릴게요.</div>
+  </div>
+  <input type="text" class="user-input" id="userInput" placeholder="여기에 입력하세요...">
+</div>
+
+<script>
+  const chatLog = document.getElementById('chatLog');
+  const userInput = document.getElementById('userInput');
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)(); // AudioContext 생성
+
+  userInput.addEventListener('keypress', function(event) {
+    if (event.key === 'Enter') {
+      const userMessage = userInput.value;
+      displayMessage(userMessage, 'user');
+      const unicodeResponse = convertToUnicode(userMessage);
+      displayMessage(unicodeResponse, 'bot');
+      playUnicodeSound(userMessage); // 소리 재생 함수 호출
+      userInput.value = '';
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+  });
+
+    function convertToUnicode(text) {
+        let unicodeString = "";
+        for (let i = 0; i < text.length; i++) {
+            const charCode = text.charCodeAt(i);
+            unicodeString += charCode.toString(16).padStart(4, '0') + " ";
+        }
+        return unicodeString.trim();
+    }
+
+  function displayMessage(message, sender) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', sender);
+    messageDiv.textContent = message;
+    chatLog.appendChild(messageDiv);
+  }
+
+  function playUnicodeSound(text) {
+    for (let i = 0; i < text.length; i++) {
+      const charCode = text.charCodeAt(i);
+      playTone(charCode, i * 0.2); // 각 문자 코드에 해당하는 소리 재생 (0.2초 간격)
+    }
+  }
+
+  function playTone(frequency, delay) {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = 'sine'; // 사인파 (기본값, 부드러운 소리)
+      oscillator.frequency.value = frequency; // 주파수 설정 (문자 코드 사용)
+
+      // Gain 노드를 사용하여 볼륨 조절 (너무 큰 소리 방지)
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime + delay); // 시작 볼륨 (0.1 = 10%)
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + delay + 0.5); // 소멸 (0.5초 동안)
+
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start(audioContext.currentTime + delay);
+      oscillator.stop(audioContext.currentTime + delay + 0.5); // 0.5초 후 정지
+  }
+
+</script>
+
+</body>
+</html>
